@@ -1,14 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My First Page</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facebook login test</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #1c1e21; }
+  button { background: #1877f2; color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  pre { background: #f0f2f5; padding: 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+  li { margin: 6px 0; }
+</style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <p>This is my GitHub Pages website.</p>
-  <a href="about.html">About</a>
+<h1>Facebook login test</h1>
+<p>Click the button, accept the permissions, and your Pages should be listed below.</p>
+
+<button id="loginBtn" disabled>Connect Facebook</button>
+
+<h2>Your Pages</h2>
+<ul id="pages"><li>Not connected yet.</li></ul>
+
+<h2>Log</h2>
+<pre id="log"></pre>
+
+<script>
+  const APP_ID = '1388473133371117';
+  const CONFIG_ID = '4180393178928442';
+
+  const logEl = document.getElementById('log');
+  const log = (m) => { logEl.textContent += m + '\n'; };
+
+  window.fbAsyncInit = function () {
+    FB.init({ appId: APP_ID, cookie: true, xfbml: false, version: 'v23.0' });
+    document.getElementById('loginBtn').disabled = false;
+    log('Facebook SDK ready.');
+  };
+
+  (function (d, s, id) {
+    if (d.getElementById(id)) return;
+    const js = d.createElement(s); js.id = id;
+    js.src = 'https://connect.facebook.net/en_US/sdk.js';
+    js.onerror = () => log('Could not load the Facebook SDK (ad blocker?).');
+    d.head.appendChild(js);
+  })(document, 'script', 'facebook-jssdk');
+
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    FB.login(function (response) {
+      if (!response.authResponse) {
+        log('Login cancelled or failed: ' + JSON.stringify(response));
+        return;
+      }
+      log('Logged in. Fetching Pages...');
+      loadPages();
+    }, { config_id: CONFIG_ID });
+  });
+
+  function loadPages() {
+    FB.api('/me/accounts', { fields: 'id,name,access_token' }, function (res) {
+      const ul = document.getElementById('pages');
+      ul.innerHTML = '';
+      if (res.error) {
+        log('Error: ' + JSON.stringify(res.error));
+        ul.innerHTML = '<li>Could not load Pages.</li>';
+        return;
+      }
+      if (!res.data || !res.data.length) {
+        ul.innerHTML = '<li>No Pages returned. Check you selected a Page during login.</li>';
+        return;
+      }
+      res.data.forEach((p) => {
+        const li = document.createElement('li');
+        li.textContent = p.name + ' (ID ' + p.id + ') - token received: ' + (p.access_token ? 'yes' : 'no');
+        ul.appendChild(li);
+      });
+      log('Found ' + res.data.length + ' Page(s).');
+    });
+  }
+</script>
 </body>
 </html>
